@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0C447C">
+<link rel="manifest" href="manifest.json">
+<title>Inventaire Stock — Damandis</title>
+<style>
+:root{--blue-dark:#0C447C;--blue-mid:#185FA5;--blue-light:#E6F1FB;--green:#1D9E75;--green-light:#E1F5EE;--red:#E24B4A;--red-light:#FCEBEB;--amber:#EF9F27;--amber-light:#FAEEDA;--text:#1a1a1a;--text2:#555;--text3:#888;--bg:#fff;--bg2:#f5f4f0;--bg3:#eeede8;--border:rgba(0,0,0,0.15);--border2:rgba(0,0,0,0.25);--r:8px;--rl:12px;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100%;font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:#e8e7e2;}
+#install-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:1000;background:var(--blue-dark);color:#E6F1FB;padding:10px 14px;flex-direction:row;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+#install-banner.show{display:flex;}
+#install-banner .ib-text{flex:1;font-size:13px;font-weight:500;}
+#install-banner .ib-text strong{display:block;font-size:14px;}
+#btn-install{border:none;border-radius:var(--r);background:#E6F1FB;color:var(--blue-dark);font-size:13px;font-weight:700;padding:8px 14px;cursor:pointer;white-space:nowrap;font-family:inherit;}
+#btn-dismiss{border:none;background:transparent;color:rgba(230,241,251,0.6);font-size:20px;cursor:pointer;padding:4px;line-height:1;}
+#offline-badge{display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:var(--amber);color:#fff;text-align:center;padding:6px;font-size:12px;font-weight:700;}
+#offline-badge.show{display:block;}
+.nav{display:flex;background:var(--blue-dark);overflow:hidden;position:sticky;top:0;z-index:100;}
+.nav-btn{flex:1;padding:13px 8px;border:none;background:transparent;color:rgba(230,241,251,0.6);font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.03em;transition:background .15s,color .15s;font-family:inherit;}
+.nav-btn.active{background:rgba(255,255,255,0.12);color:#E6F1FB;border-bottom:2px solid #5DCAA5;}
+.page{display:none;}.page.active{display:block;}
+.terminal{background:var(--bg);max-width:520px;margin:0 auto;box-shadow:0 2px 16px rgba(0,0,0,.08);}
+@media(min-width:540px){.terminal{margin:12px auto;border-radius:var(--rl);border:.5px solid var(--border);overflow:hidden;}}
+.header{background:var(--blue-dark);padding:13px 18px;display:flex;align-items:center;gap:10px;}
+.scan-dot{width:7px;height:7px;border-radius:50%;background:#5DCAA5;animation:pulse 1.8s ease-in-out infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+.header-title{color:#E6F1FB;font-size:14px;font-weight:600;flex:1;}
+.pwa-badge{font-size:10px;background:rgba(93,202,165,0.2);color:#5DCAA5;padding:2px 8px;border-radius:999px;font-weight:700;border:1px solid rgba(93,202,165,0.3);}
+.db-badge{font-size:10px;background:rgba(239,159,39,0.25);color:#EF9F27;padding:2px 8px;border-radius:999px;font-weight:700;border:1px solid rgba(239,159,39,0.4);}
+.sec-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue-dark);background:var(--blue-light);padding:5px 18px;border-bottom:.5px solid rgba(12,68,124,.15);}
+.body{padding:15px 18px;display:flex;flex-direction:column;gap:12px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fl{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:5px;}
+.req{color:var(--red);font-size:14px;line-height:1;}
+.badge-auto{font-size:10px;background:var(--green-light);color:#085041;padding:1px 7px;border-radius:999px;font-weight:700;}
+input[type=text],input[type=number],input[type=date]{width:100%;height:44px;padding:0 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg2);color:var(--text);font-size:16px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s,background .15s;-webkit-appearance:none;}
+input:focus{border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(24,95,165,.15);background:var(--bg);}
+input[readonly]{color:var(--text2);background:var(--bg3);border-color:var(--border);cursor:default;}
+input.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(226,75,74,.12);}
+input.ok{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,158,117,.12);}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.hint{font-size:11px;color:var(--text3);margin-top:2px;}
+.errmsg{font-size:11px;color:var(--red);margin-top:2px;display:none;}
+.errmsg.show{display:block;}
+.char-c{font-size:11px;color:var(--text3);text-align:right;margin-top:2px;}
+.char-c.full{color:var(--green);font-weight:700;}
+.char-c.over{color:var(--red);font-weight:700;}
+.autocomplete-wrap{position:relative;}
+.dropdown{position:absolute;top:100%;left:0;right:0;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;z-index:200;display:none;}
+.dropdown.open{display:block;}
+.dd-item{padding:10px 12px;cursor:pointer;border-bottom:.5px solid var(--border);}
+.dd-item:last-child{border-bottom:none;}
+.dd-item:hover,.dd-item.sel{background:var(--blue-light);}
+.dd-code{font-weight:700;color:var(--blue-dark);font-size:12px;}
+.dd-desc{color:var(--text);font-size:13px;margin-top:1px;}
+.dd-empty{padding:12px;color:var(--text3);font-size:13px;text-align:center;}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:15px 18px;padding-bottom:calc(15px + env(safe-area-inset-bottom));background:var(--bg2);border-top:.5px solid var(--border);}
+.btn-v{height:48px;border:none;border-radius:var(--r);background:var(--blue-dark);color:#E6F1FB;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s,transform .1s;}
+.btn-v:hover{background:var(--blue-mid);}
+.btn-v:active{transform:scale(.97);}
+.btn-c{height:48px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text2);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,transform .1s;}
+.btn-c:hover{background:var(--bg3);color:var(--text);}
+.btn-c:active{transform:scale(.97);}
+.admin-wrap{padding:14px;max-width:100%;}
+.admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.admin-title{font-size:16px;font-weight:700;color:var(--text);}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.stat-card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:10px 12px;text-align:center;}
+.stat-num{font-size:22px;font-weight:700;color:var(--blue-dark);}
+.stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+.btn-export{height:36px;padding:0 14px;border:none;border-radius:var(--r);background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-clear{height:36px;padding:0 14px;border:1px solid var(--red);border-radius:var(--r);background:transparent;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.search-bar{width:100%;height:40px;padding:0 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;}
+.search-bar:focus{border-color:var(--blue-mid);box-shadow:0 0 0 3px rgba(24,95,165,.12);}
+.table-wrap{overflow-x:auto;border-radius:var(--r);border:.5px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:600px;}
+thead th{background:var(--blue-dark);color:#E6F1FB;padding:8px 10px;text-align:left;font-weight:700;font-size:11px;letter-spacing:.04em;white-space:nowrap;}
+tbody tr{border-bottom:.5px solid var(--border);}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--blue-light);}
+tbody td{padding:8px 10px;color:var(--text);vertical-align:middle;}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;}
+.pill-ok{background:var(--green-light);color:#085041;}
+.pill-warn{background:var(--amber-light);color:#633806;}
+.pill-bad{background:var(--red-light);color:#791F1F;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px;}
+.prod-wrap{padding:14px;max-width:520px;margin:0 auto;}
+.prod-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.prod-title{font-size:16px;font-weight:700;color:var(--text);}
+.prod-count{font-size:12px;color:var(--text3);background:var(--bg2);padding:3px 10px;border-radius:999px;border:.5px solid var(--border);}
+.prod-search{width:100%;height:40px;padding:0 12px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:10px;}
+.prod-list{display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 160px);overflow-y:auto;}
+.prod-card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:9px 14px;display:flex;align-items:center;gap:10px;}
+.prod-code{font-size:12px;font-weight:700;color:var(--blue-dark);white-space:nowrap;}
+.prod-desc{font-size:12px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.prod-unite{font-size:10px;color:var(--text3);background:var(--bg2);padding:1px 6px;border-radius:999px;border:.5px solid var(--border);white-space:nowrap;}
+.btn-import{display:inline-flex;align-items:center;height:36px;padding:0 14px;border:none;border-radius:var(--r);background:var(--blue-dark);color:#E6F1FB;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.btn-import:hover{background:var(--blue-mid);}
+.btn-suppr-db{height:36px;padding:0 14px;border:1px solid var(--red);border-radius:var(--r);background:transparent;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-suppr-db:hover{background:var(--red-light);}
+.prod-actions{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.btn-act{display:inline-flex;align-items:center;height:38px;padding:0 16px;border:none;border-radius:var(--r);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.btn-blue{background:var(--blue-dark);color:#E6F1FB;}
+.btn-blue:hover{background:var(--blue-mid);}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{opacity:.9;}
+.btn-red-sm{background:transparent;border:none;color:var(--red);font-size:13px;font-weight:700;cursor:pointer;padding:4px 8px;border-radius:var(--r);}
+.btn-edit-sm{background:transparent;border:none;color:var(--blue-mid);font-size:13px;font-weight:700;cursor:pointer;padding:4px 8px;border-radius:var(--r);}
+.prod-card{background:var(--bg);border:.5px solid var(--border);border-radius:var(--r);padding:9px 14px;display:flex;align-items:center;gap:8px;}
+#modal-overlay.show{display:flex!important;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--green);color:#fff;padding:12px 20px;border-radius:var(--r);font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;transition:transform .3s cubic-bezier(.22,1,.36,1);z-index:9999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.18);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div id="offline-badge">&#9888; Mode hors ligne</div>
+
+<div id="install-banner">
+  <div class="ib-text"><strong>&#x1F4F1; Installer l'application</strong>Acc&#232;s rapide depuis l'&#233;cran d'accueil</div>
+  <button id="btn-install">Installer</button>
+  <button id="btn-dismiss">&#10005;</button>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('saisie',this)">&#x22EF; Saisie</button>
+  <button class="nav-btn" onclick="showPage('produits',this)">&#x229E; Produits</button>
+  <button class="nav-btn" onclick="showPage('admin',this)">&#x2261; Historique</button>
+</nav>
+
+<div class="page active" id="page-saisie">
+<div class="terminal">
+  <div class="header">
+    <div class="scan-dot"></div>
+    <span class="header-title">Inventaire Stock &#8212; Damandis</span>
+    <span class="pwa-badge">PWA</span>
+    <span class="db-badge" id="db-badge-count">... articles</span>
+  </div>
+  <div class="sec-label">&#9636; Localisation</div>
+  <div class="body">
+    <div class="fg">
+      <label class="fl" for="emplacement">Emplacement</label>
+      <input type="text" id="emplacement" placeholder="ex: A-01-03" autocomplete="off">
+    </div>
+    <div class="fg">
+      <label class="fl" for="contenant">N&#176; de Contenant <span class="req">*</span></label>
+      <input type="text" id="contenant" placeholder="18 chiffres obligatoires" autocomplete="off" inputmode="numeric">
+      <div class="char-c" id="char-cont">0 / 18 chiffres</div>
+      <div class="errmsg" id="err-cont">&#9888; Exactement 18 chiffres requis</div>
+    </div>
+  </div>
+  <div class="sec-label">&#9636; Identification produit</div>
+  <div class="body">
+    <div class="fg">
+      <label class="fl" for="code-produit">Code Produit</label>
+      <div class="autocomplete-wrap">
+        <input type="text" id="code-produit" placeholder="Scanner ou saisir le code&#8230;" autocomplete="off">
+        <div class="dropdown" id="dropdown"></div>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl" for="description">Description <span class="badge-auto">AUTO</span></label>
+      <input type="text" id="description" placeholder="Rempli depuis la base de donn&#233;es" readonly>
+    </div>
+    <div class="row">
+      <div class="fg">
+        <label class="fl" for="quantite">Quantit&#233;</label>
+        <input type="number" id="quantite" placeholder="0" min="0" step="1" inputmode="numeric">
+      </div>
+      <div class="fg">
+        <label class="fl" for="unite">Unit&#233; <span class="badge-auto">AUTO</span></label>
+        <input type="text" id="unite" placeholder="&#8212;" readonly>
+      </div>
+    </div>
+  </div>
+  <div class="sec-label">&#9636; Tra&#231;abilit&#233;</div>
+  <div class="body">
+    <div class="fg">
+      <label class="fl" for="dlc">Date limite de consommation</label>
+      <input type="date" id="dlc">
+      <div class="hint" id="hint-dlc">Minimum 30 jours &#224; partir d'aujourd'hui</div>
+      <div class="errmsg" id="err-dlc">&#9888; Date insuffisante &#8212; minimum 30 jours</div>
+    </div>
+    <div class="fg">
+      <label class="fl" for="lot">Lot</label>
+      <input type="text" id="lot" placeholder="ex: LOT-2026-048" autocomplete="off">
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-v" onclick="valider()">&#10003; Validation</button>
+    <button class="btn-c" onclick="resetForm()">&#10005; Annulation</button>
+  </div>
+</div>
+</div>
+
+<div class="page" id="page-produits">
+<div class="prod-wrap">
+  <div class="prod-head">
+    <span class="prod-title">Base de donn&#233;es produits</span>
+    <span class="prod-count" id="prod-count-badge">0 articles</span>
+  </div>
+  <!-- Barre d'actions -->
+  <div class="prod-actions">
+    <label class="btn-act btn-blue">
+      &#8679; Importer Excel
+      <input type="file" id="import-excel" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importerExcel(this)">
+    </label>
+    <button class="btn-act btn-green" onclick="ouvrirAjout()">&#43; Ajouter</button>
+  </div>
+  <!-- Message info import -->
+  <div id="import-info" style="display:none;font-size:11px;padding:7px 12px;border-radius:var(--r);margin-bottom:8px;border:.5px solid;"></div>
+  <!-- Barre de recherche -->
+  <input type="text" class="prod-search" id="prod-search" placeholder="&#128269; Rechercher code ou description&#8230;" oninput="renderProduits()">
+  <!-- Liste produits -->
+  <div class="prod-list" id="prod-list">
+    <div class="empty-state" style="padding:40px 20px;">
+      <div style="font-size:32px;margin-bottom:8px;">&#128196;</div>
+      <div style="font-weight:700;color:var(--text2);margin-bottom:4px;">Base de donn&#233;es vide</div>
+      <div style="font-size:12px;">Importez un fichier Excel ou ajoutez un article</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal Ajout / Modification produit -->
+<div id="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;">
+  <div style="background:var(--bg);border-radius:var(--rl);width:min(480px,94vw);max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <div style="background:var(--blue-dark);padding:14px 18px;border-radius:var(--rl) var(--rl) 0 0;display:flex;align-items:center;justify-content:space-between;">
+      <span id="modal-title" style="color:#E6F1FB;font-size:14px;font-weight:700;">Ajouter un article</span>
+      <button onclick="fermerModal()" style="border:none;background:transparent;color:rgba(230,241,251,.7);font-size:20px;cursor:pointer;line-height:1;">&#10005;</button>
+    </div>
+    <div style="padding:18px;display:flex;flex-direction:column;gap:12px;">
+      <div class="fg">
+        <label class="fl">Code Produit <span class="req">*</span></label>
+        <input type="text" id="modal-code" placeholder="ex: C1MD214" autocomplete="off" style="text-transform:uppercase;">
+        <div class="errmsg" id="modal-err-code">&#9888; Code obligatoire</div>
+      </div>
+      <div class="fg">
+        <label class="fl">Description <span class="req">*</span></label>
+        <input type="text" id="modal-desc" placeholder="ex: MAIS DOUX EN GRAIN 4/4" autocomplete="off">
+        <div class="errmsg" id="modal-err-desc">&#9888; Description obligatoire</div>
+      </div>
+      <div class="fg">
+        <label class="fl">Unit&#233;</label>
+        <input type="text" id="modal-unite" placeholder="PCS" autocomplete="off">
+      </div>
+      <input type="hidden" id="modal-mode" value="add">
+      <input type="hidden" id="modal-orig-code" value="">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 18px 18px;">
+      <button class="btn-c" onclick="fermerModal()">Annuler</button>
+      <button class="btn-v" onclick="sauvegarderArticle()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-admin">
+<div class="admin-wrap">
+  <div class="admin-header">
+    <span class="admin-title">Historique des saisies</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-export" onclick="exportCSV()">&#8681; CSV</button>
+      <button class="btn-clear" onclick="clearAll()">&#128465; Vider</button>
+    </div>
+  </div>
+  <div class="stat-row" id="stats"></div>
+  <input type="text" class="search-bar" id="search" placeholder="Rechercher code, lot, emplacement&#8230;" oninput="renderTable()">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Date/Heure</th><th>Emplacement</th><th>Contenant</th><th>Code</th><th>Description</th><th>Qt&#233;</th><th>Unit&#233;</th><th>DLC</th><th>Lot</th><th>Statut</th></tr></thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DB={};
+const saveSaisies=a=>localStorage.setItem("inv_s",JSON.stringify(a));
+
+function getMinDate(){const d=new Date();d.setDate(d.getDate()+30);return d.toISOString().split("T")[0];}
+const MIN_DATE=getMinDate();
+document.getElementById("dlc").min=MIN_DATE;
+
+function showPage(id,btn){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("page-"+id).classList.add("active");
+  btn.classList.add("active");
+  if(id==="admin"){renderStats();renderTable();}
+  if(id==="produits")renderProduits();
+}
+
+// AUTOCOMPLETE
+const codeEl=document.getElementById("code-produit");
+const ddEl=document.getElementById("dropdown");
+let selIdx=-1;
+
+codeEl.addEventListener("input",function(){
+  const q=this.value.trim().toUpperCase();
+  selIdx=-1;
+  if(!q){closeDd();clearProd();return;}
+  if(getMergedDB()[q]){fillProd(q);closeDd();this.classList.add("ok");this.classList.remove("err");return;}
+  clearProd();this.classList.remove("ok","err");
+  const hits=Object.entries(getMergedDB()).filter(([c,p])=>c.startsWith(q)||c.includes(q)||p.description.toUpperCase().includes(q)).slice(0,10);
+  if(!hits.length){ddEl.innerHTML='<div class="dd-empty">Aucun produit trouv&#233;</div>';ddEl.classList.add("open");return;}
+  ddEl.innerHTML=hits.map(([c,p],i)=>`<div class="dd-item" data-code="${c}" data-i="${i}"><div class="dd-code">${c}</div><div class="dd-desc">${p.description}</div></div>`).join("");
+  ddEl.classList.add("open");
+  ddEl.querySelectorAll(".dd-item").forEach(it=>it.addEventListener("click",()=>{codeEl.value=it.dataset.code;fillProd(it.dataset.code);closeDd();codeEl.classList.add("ok");}));
+});
+
+codeEl.addEventListener("keydown",e=>{
+  const items=ddEl.querySelectorAll(".dd-item");
+  if(!items.length)return;
+  if(e.key==="ArrowDown"){e.preventDefault();selIdx=Math.min(selIdx+1,items.length-1);hiItem(items);}
+  else if(e.key==="ArrowUp"){e.preventDefault();selIdx=Math.max(selIdx-1,0);hiItem(items);}
+  else if(e.key==="Enter"&&selIdx>=0){e.preventDefault();const c=items[selIdx].dataset.code;codeEl.value=c;fillProd(c);closeDd();codeEl.classList.add("ok");}
+});
+
+function hiItem(items){items.forEach((it,i)=>it.classList.toggle("sel",i===selIdx));if(selIdx>=0)items[selIdx].scrollIntoView({block:"nearest"});}
+function closeDd(){ddEl.classList.remove("open");ddEl.innerHTML="";selIdx=-1;}
+function fillProd(code){const p=getMergedDB()[code];if(!p)return;document.getElementById("description").value=p.description;document.getElementById("unite").value=p.unite;}
+function clearProd(){document.getElementById("description").value="";document.getElementById("unite").value="";}
+document.addEventListener("click",e=>{if(!e.target.closest(".autocomplete-wrap"))closeDd();});
+
+document.getElementById("contenant").addEventListener("input",function(){
+  const d=this.value.replace(/\D/g,""),n=d.length;
+  const c=document.getElementById("char-cont"),e=document.getElementById("err-cont");
+  c.textContent=n+" / 18 chiffres";
+  c.className="char-c"+(n===18?" full":n>18?" over":"");
+  if(n>0&&n!==18){this.classList.add("err");this.classList.remove("ok");e.classList.add("show");}
+  else if(n===18){this.classList.remove("err");this.classList.add("ok");e.classList.remove("show");}
+  else{this.classList.remove("err","ok");e.classList.remove("show");}
+});
+
+document.getElementById("dlc").addEventListener("change",function(){
+  const e=document.getElementById("err-dlc"),h=document.getElementById("hint-dlc");
+  if(this.value&&this.value<MIN_DATE){this.classList.add("err");this.classList.remove("ok");e.classList.add("show");h.style.display="none";}
+  else if(this.value){this.classList.remove("err");this.classList.add("ok");e.classList.remove("show");h.style.display="block";}
+  else{this.classList.remove("err","ok");e.classList.remove("show");h.style.display="block";}
+});
+
+function valider(){
+  let ok=true;
+  const ce=document.getElementById("contenant"),digits=ce.value.replace(/\D/g,"");
+  if(digits.length!==18){ce.classList.add("err");document.getElementById("err-cont").classList.add("show");ok=false;}
+  const de=document.getElementById("dlc");
+  if(de.value&&de.value<MIN_DATE){de.classList.add("err");document.getElementById("err-dlc").classList.add("show");ok=false;}
+  if(!ok)return;
+  const s=getSaisies();
+  s.unshift({id:Date.now(),datetime:new Date().toLocaleString("fr-FR"),emplacement:document.getElementById("emplacement").value.trim(),contenant:digits,code:codeEl.value.trim().toUpperCase(),description:document.getElementById("description").value,quantite:document.getElementById("quantite").value||"0",unite:document.getElementById("unite").value,dlc:de.value,lot:document.getElementById("lot").value.trim()});
+  saveSaisies(s);showToast("&#10003; Enregistrement sauvegard&#233;");resetForm();
+}
+
+function resetForm(){
+  ["emplacement","contenant","code-produit","description","quantite","unite","dlc","lot"].forEach(id=>{const el=document.getElementById(id);el.value="";el.classList.remove("err","ok");});
+  document.getElementById("err-cont").classList.remove("show");
+  document.getElementById("err-dlc").classList.remove("show");
+  document.getElementById("hint-dlc").style.display="block";
+  document.getElementById("char-cont").textContent="0 / 18 chiffres";
+  document.getElementById("char-cont").className="char-c";
+  closeDd();
+}
+
+// ═══════════════════════════════════════
+// GESTION BASE DE DONNÉES (localStorage)
+// ═══════════════════════════════════════
+function getDBExtra(){try{return JSON.parse(localStorage.getItem("db_extra")||"{}");}catch{return{};}}
+function saveDBExtra(o){localStorage.setItem("db_extra",JSON.stringify(o));}
+function getMergedDB(){return Object.assign({},DB,getDBExtra());}
+let TOTAL_DB_VAR=Object.keys(getMergedDB()).length;
+
+// ── IMPORT EXCEL / CSV ──
+function importerExcel(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      let added=0,skipped=0;
+      const extra=getDBExtra();
+      const isCSV=file.name.toLowerCase().endsWith(".csv");
+      if(isCSV){
+        const text=new TextDecoder("utf-8").decode(new Uint8Array(e.target.result));
+        const lines=text.split(/\r\n|\n|\r/).filter(l=>l.trim());
+        const sep=lines[0].includes(";")?";":",";
+        const header=lines[0].split(sep).map(h=>h.replace(/^"|"$/g,"").trim().toLowerCase());
+        const ci=header.findIndex(h=>h.includes("code"));
+        const di=header.findIndex(h=>h.includes("desc"));
+        const ui=header.findIndex(h=>h.includes("unit"));
+        if(ci<0||di<0){showInfo("&#9888; Colonnes Code/Description introuvables",true);return;}
+        for(let i=1;i<lines.length;i++){
+          const cols=lines[i].split(sep).map(c=>c.replace(/^"|"$/g,"").trim());
+          const code=(cols[ci]||"").toUpperCase().trim();
+          const desc=(cols[di]||"").trim();
+          const unite=ui>=0?(cols[ui]||"PCS").trim():"PCS";
+          if(!code||!desc)continue;
+          if(!extra[code]){extra[code]={description:desc,unite:unite};added++;}
+          else skipped++;
+        }
+      } else {
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+        if(!rows.length){showInfo("&#9888; Fichier vide",true);return;}
+        const keys=Object.keys(rows[0]);
+        const ckey=keys.find(k=>k.toLowerCase().includes("code"))||keys[0];
+        const dkey=keys.find(k=>k.toLowerCase().includes("desc"))||keys[1];
+        const ukey=keys.find(k=>k.toLowerCase().includes("unit"));
+        if(!ckey||!dkey){showInfo("&#9888; Colonnes Code/Description introuvables",true);return;}
+        for(const row of rows){
+          const code=String(row[ckey]||"").toUpperCase().trim();
+          const desc=String(row[dkey]||"").trim();
+          const unite=ukey?String(row[ukey]||"PCS").trim():"PCS";
+          if(!code||!desc)continue;
+          if(!extra[code]){extra[code]={description:desc,unite:unite};added++;}
+          else skipped++;
+        }
+      }
+      saveDBExtra(extra);
+      TOTAL_DB_VAR=Object.keys(getMergedDB()).length;
+      renderProduits();
+      document.getElementById("db-badge-count").textContent=TOTAL_DB_VAR+" articles";
+      showInfo("&#10003; "+added+" article(s) import&#233;(s)"+(skipped?" &mdash; "+skipped+" d&#233;j&#224; pr&#233;sents":""));
+    }catch(err){showInfo("&#9888; Erreur: "+err.message,true);}
+    input.value="";
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── AJOUTER / MODIFIER un article ──
+function ouvrirAjout(){
+  document.getElementById("modal-mode").value="add";
+  document.getElementById("modal-title").textContent="Ajouter un article";
+  document.getElementById("modal-code").value="";
+  document.getElementById("modal-code").readOnly=false;
+  document.getElementById("modal-desc").value="";
+  document.getElementById("modal-unite").value="PCS";
+  document.getElementById("modal-orig-code").value="";
+  document.getElementById("modal-err-code").classList.remove("show");
+  document.getElementById("modal-err-desc").classList.remove("show");
+  document.getElementById("modal-overlay").style.display="flex";
+}
+
+function ouvrirModif(code){
+  const mdb=getMergedDB();
+  const p=mdb[code];if(!p)return;
+  document.getElementById("modal-mode").value="edit";
+  document.getElementById("modal-title").textContent="Modifier l'article";
+  document.getElementById("modal-code").value=code;
+  document.getElementById("modal-code").readOnly=true;
+  document.getElementById("modal-desc").value=p.description;
+  document.getElementById("modal-unite").value=p.unite||"PCS";
+  document.getElementById("modal-orig-code").value=code;
+  document.getElementById("modal-err-code").classList.remove("show");
+  document.getElementById("modal-err-desc").classList.remove("show");
+  document.getElementById("modal-overlay").style.display="flex";
+}
+
+function fermerModal(){
+  document.getElementById("modal-overlay").style.display="none";
+}
+
+function sauvegarderArticle(){
+  const mode=document.getElementById("modal-mode").value;
+  const code=document.getElementById("modal-code").value.trim().toUpperCase();
+  const desc=document.getElementById("modal-desc").value.trim();
+  const unite=document.getElementById("modal-unite").value.trim()||"PCS";
+  let ok=true;
+  if(!code){document.getElementById("modal-err-code").classList.add("show");ok=false;}
+  else document.getElementById("modal-err-code").classList.remove("show");
+  if(!desc){document.getElementById("modal-err-desc").classList.add("show");ok=false;}
+  else document.getElementById("modal-err-desc").classList.remove("show");
+  if(!ok)return;
+  const extra=getDBExtra();
+  if(mode==="add"){
+    if(getMergedDB()[code]){
+      document.getElementById("modal-err-code").textContent="&#9888; Code d&#233;j&#224; existant";
+      document.getElementById("modal-err-code").classList.add("show");return;
+    }
+    extra[code]={description:desc,unite};
+    showToast("&#10003; Article ajout&#233;");
+  } else {
+    const orig=document.getElementById("modal-orig-code").value;
+    extra[orig]={description:desc,unite};
+    showToast("&#10003; Article modifi&#233;");
+  }
+  saveDBExtra(extra);
+  TOTAL_DB_VAR=Object.keys(getMergedDB()).length;
+  fermerModal();
+  renderProduits();
+  document.getElementById("db-badge-count").textContent=TOTAL_DB_VAR+" articles";
+}
+
+function supprimerArticle(code){
+  if(!confirm("Supprimer l'article "+code+" ?"))return;
+  const extra=getDBExtra();
+  delete extra[code];
+  saveDBExtra(extra);
+  TOTAL_DB_VAR=Object.keys(getMergedDB()).length;
+  renderProduits();
+  document.getElementById("db-badge-count").textContent=TOTAL_DB_VAR+" articles";
+  showToast("&#128465; Article supprim&#233;","#E24B4A");
+}
+
+function showInfo(msg,isError){
+  const el=document.getElementById("import-info");
+  el.innerHTML=msg;
+  el.style.display="block";
+  el.style.color=isError?"var(--red)":"var(--green)";
+  el.style.borderColor=isError?"rgba(226,75,74,.4)":"rgba(29,158,117,.4)";
+  el.style.background=isError?"var(--red-light)":"var(--green-light)";
+  clearTimeout(window._it);window._it=setTimeout(()=>el.style.display="none",6000);
+}
+
+// ── RENDU LISTE PRODUITS ──
+function renderProduits(){
+  const q=(document.getElementById("prod-search").value||"").toUpperCase();
+  const MDB=getMergedDB();
+  const extra=getDBExtra();
+  const keys=Object.keys(MDB).filter(k=>!q||k.includes(q)||MDB[k].description.toUpperCase().includes(q));
+  document.getElementById("prod-count-badge").textContent=keys.length+" / "+Object.keys(MDB).length+" articles";
+  const list=document.getElementById("prod-list");
+  if(!keys.length){
+    list.innerHTML=Object.keys(MDB).length===0
+      ?`<div class="empty-state" style="padding:40px 20px;"><div style="font-size:32px;margin-bottom:8px;">&#128196;</div><div style="font-weight:700;color:var(--text2);margin-bottom:4px;">Base de donn&#233;es vide</div><div style="font-size:12px;">Importez un fichier Excel ou ajoutez un article</div></div>`
+      :`<div class="empty-state">Aucun produit trouv&#233;</div>`;
+    return;
+  }
+  const shown=keys.slice(0,200);
+  const canEdit=code=>!!extra[code];
+  list.innerHTML=shown.map(c=>`
+    <div class="prod-card">
+      <div class="prod-code">${c}</div>
+      <div class="prod-desc">${MDB[c].description}</div>
+      <span class="prod-unite">${MDB[c].unite}</span>
+      <button class="btn-edit-sm" onclick="ouvrirModif('${c}')" title="Modifier">&#9998;</button>
+      ${canEdit(c)?`<button class="btn-red-sm" onclick="supprimerArticle('${c}')" title="Supprimer">&#128465;</button>`:''}
+    </div>`).join("")+(keys.length>200?`<div class="empty-state" style="padding:10px;font-size:12px;">+${keys.length-200} autres &mdash; affinez la recherche</div>`:"");
+}
+
+
+// ── TOAST ──
+function showToast(msg,bg){
+  const t=document.getElementById("toast");
+  t.innerHTML=msg;
+  t.style.background=bg||"var(--green)";
+  t.classList.add("show");
+  clearTimeout(window._tt);
+  window._tt=setTimeout(()=>t.classList.remove("show"),2800);
+}
+
+// ── SAISIES localStorage ──
+function getSaisies(){try{return JSON.parse(localStorage.getItem("inv_s")||"[]");}catch{return[];}}
+
+// ── EXPORT CSV ──
+function exportCSV(){
+  const s=getSaisies();
+  if(!s.length){showToast("Aucune donnée","#E24B4A");return;}
+  const h=["#","Date/Heure","Emplacement","N Contenant","Code Produit","Description","Quantite","Unite","DLC","Lot"];
+  const rows=s.map((e,i)=>[s.length-i,e.datetime,e.emplacement,e.contenant,e.code,e.description,e.quantite,e.unite,e.dlc,e.lot].map(v=>'"'+(v||"").toString().replace(/"/g,"''")+'"').join(";"));
+  const csv="\uFEFF"+h.join(";")+String.fromCharCode(10)+rows.join(String.fromCharCode(10));
+  const a=document.createElement("a");
+  a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);
+  a.download="inventaire_damandis_"+new Date().toISOString().split("T")[0]+".csv";
+  a.click();
+  showToast("⬇ Export CSV téléchargé");
+}
+
+// ── VIDER HISTORIQUE ──
+function clearAll(){
+  if(!confirm("Supprimer tout l'historique ?"))return;
+  localStorage.removeItem("inv_s");
+  renderStats();renderTable();
+  showToast("✅ Historique vidé","#E24B4A");
+}
+
+// ── STATS ──
+function renderStats(){
+  const s=getSaisies();
+  const total=s.length;
+  const today=new Date().toLocaleDateString("fr-FR");
+  const todayCount=s.filter(e=>e.datetime&&e.datetime.startsWith(today.split("/").reverse().join("/"))||false).length;
+  const codes=new Set(s.map(e=>e.code)).size;
+  document.getElementById("stats").innerHTML=`
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Saisies totales</div></div>
+    <div class="stat-card"><div class="stat-num">${codes}</div><div class="stat-label">Produits uniques</div></div>
+    <div class="stat-card"><div class="stat-num">${TOTAL_DB_VAR}</div><div class="stat-label">Articles DB</div></div>`;
+}
+
+// ── TABLE HISTORIQUE ──
+function renderTable(){
+  const q=(document.getElementById("search").value||"").toUpperCase();
+  const s=getSaisies().filter(e=>!q||
+    (e.code&&e.code.toUpperCase().includes(q))||
+    (e.lot&&e.lot.toUpperCase().includes(q))||
+    (e.emplacement&&e.emplacement.toUpperCase().includes(q))||
+    (e.description&&e.description.toUpperCase().includes(q))||
+    (e.contenant&&e.contenant.includes(q))
+  );
+  const tbody=document.getElementById("table-body");
+  if(!s.length){
+    tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--text3);">Aucune saisie</td></tr>';
+    return;
+  }
+  const dlcOk=v=>!v||(v>=new Date().toISOString().split("T")[0]);
+  tbody.innerHTML=s.map((e,i)=>`<tr>
+    <td>${s.length-i}</td>
+    <td style="white-space:nowrap;font-size:11px;">${e.datetime||""}</td>
+    <td>${e.emplacement||""}</td>
+    <td style="font-size:11px;">${e.contenant||""}</td>
+    <td style="font-weight:700;color:var(--blue-dark);">${e.code||""}</td>
+    <td style="font-size:11px;">${e.description||""}</td>
+    <td style="text-align:center;">${e.quantite||0}</td>
+    <td style="text-align:center;">${e.unite||""}</td>
+    <td style="white-space:nowrap;font-size:11px;">${e.dlc||""}</td>
+    <td style="font-size:11px;">${e.lot||""}</td>
+    <td style="text-align:center;">${dlcOk(e.dlc)?'<span style="color:var(--green);font-weight:700;">&#10003;</span>':'<span style="color:var(--red);font-weight:700;">&#9888;</span>'}</td>
+  </tr>`).join("");
+}
+
+renderProduits();
+document.getElementById("db-badge-count").textContent=TOTAL_DB_VAR+" articles";
+</script>
+</body>
+</html>
